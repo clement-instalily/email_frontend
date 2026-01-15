@@ -1,14 +1,11 @@
-import { useState } from 'react'
-import { 
-  Mail, 
-  Zap, 
-  AlertTriangle, 
-  Info, 
-  Calendar, 
-  Users, 
-  Send, 
-  ListTodo, 
-  Clock,
+import { useState, useEffect } from 'react'
+import {
+  Mail,
+  AlertTriangle,
+  Info,
+  Calendar,
+  Users,
+  ListTodo,
   Sparkles,
   Settings,
   RefreshCw,
@@ -17,83 +14,81 @@ import {
   ExternalLink,
   User,
   CheckCircle2,
-  XCircle
+  XCircle,
+  LogOut,
+  Database,
+  Plane
 } from 'lucide-react'
+import LoginPage from './components/LoginPage'
+import EmailWalletsPage from './components/GmailAccountsPage'
 
-const API_BASE = 'http://127.0.0.1:8000'
+// Python FastAPI backend handles both auth and analysis
+// const API_BASE = 'http://127.0.0.1:8000'  // Local development
+const API_BASE = 'https://summarize-ai-1098668201338.us-central1.run.app'  // Production
 
 const CATEGORY_CONFIG = {
-  IMPORTANCE: {
-    label: 'Important',
-    icon: Zap,
-    color: 'from-amber-500 to-orange-600',
-    bgColor: 'bg-amber-50',
-    borderColor: 'border-amber-200',
-    textColor: 'text-amber-600',
-    description: 'High-priority emails requiring attention'
-  },
-  URGENCY: {
-    label: 'Urgent',
+  ACTIONS_AND_COMMITMENTS: {
+    label: 'Actions & Commitments',
     icon: AlertTriangle,
     color: 'from-rose-500 to-red-600',
     bgColor: 'bg-rose-50',
     borderColor: 'border-rose-200',
     textColor: 'text-rose-600',
-    description: 'Time-sensitive matters'
+    description: 'Next steps and promises'
   },
-  INFORMATIONAL: {
-    label: 'Informational',
-    icon: Info,
-    color: 'from-sky-500 to-blue-600',
-    bgColor: 'bg-sky-50',
-    borderColor: 'border-sky-200',
-    textColor: 'text-sky-600',
-    description: 'News, newsletters & updates'
-  },
-  SCHEDULE: {
-    label: 'Schedule',
+  SCHEDULE_AND_DEADLINES: {
+    label: 'Schedule & Deadlines',
     icon: Calendar,
     color: 'from-violet-500 to-purple-600',
     bgColor: 'bg-violet-50',
     borderColor: 'border-violet-200',
     textColor: 'text-violet-600',
-    description: 'Calendar events & dates'
+    description: 'Calendar events and deadlines'
   },
-  COMMITMENTS: {
-    label: 'Commitments to You',
-    icon: Users,
+  BILLS_AND_RECEIPTS: {
+    label: 'Bills & Receipts',
+    icon: ListTodo,
+    color: 'from-amber-500 to-orange-600',
+    bgColor: 'bg-amber-50',
+    borderColor: 'border-amber-200',
+    textColor: 'text-amber-600',
+    description: 'Invoices, receipts, statements'
+  },
+  FINANCE: {
+    label: 'Finance',
+    icon: Info,
     color: 'from-emerald-500 to-green-600',
     bgColor: 'bg-emerald-50',
     borderColor: 'border-emerald-200',
     textColor: 'text-emerald-600',
-    description: 'Promises made by others'
+    description: 'Market news, portfolio updates'
   },
-  OUTBOUND_COMMITMENTS: {
-    label: 'Your Commitments',
-    icon: Send,
-    color: 'from-cyan-500 to-teal-600',
-    bgColor: 'bg-cyan-50',
-    borderColor: 'border-cyan-200',
-    textColor: 'text-cyan-600',
-    description: 'Promises you made'
+  RECRUITING: {
+    label: 'Recruiting',
+    icon: Users,
+    color: 'from-sky-500 to-blue-600',
+    bgColor: 'bg-sky-50',
+    borderColor: 'border-sky-200',
+    textColor: 'text-sky-600',
+    description: 'Job search and interviews'
   },
-  REQUESTS: {
-    label: 'Requests',
-    icon: ListTodo,
-    color: 'from-fuchsia-500 to-pink-600',
-    bgColor: 'bg-fuchsia-50',
-    borderColor: 'border-fuchsia-200',
-    textColor: 'text-fuchsia-600',
-    description: 'Tasks & action items'
+  TRAVEL: {
+    label: 'Travel',
+    icon: Plane,
+    color: 'from-indigo-500 to-blue-600',
+    bgColor: 'bg-indigo-50',
+    borderColor: 'border-indigo-200',
+    textColor: 'text-indigo-600',
+    description: 'Flights, hotels, itineraries'
   },
-  DEADLINES: {
-    label: 'Deadlines',
-    icon: Clock,
-    color: 'from-red-500 to-rose-600',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-200',
-    textColor: 'text-red-600',
-    description: 'Time-bound deliverables'
+  PERSONAL: {
+    label: 'Personal',
+    icon: User,
+    color: 'from-pink-500 to-rose-600',
+    bgColor: 'bg-pink-50',
+    borderColor: 'border-pink-200',
+    textColor: 'text-pink-600',
+    description: 'Friends and family'
   }
 }
 
@@ -117,6 +112,16 @@ function EmailCard({ email, category }) {
       className={`glass rounded-xl p-4 transition-all duration-300 hover:shadow-md cursor-pointer border ${config.borderColor} hover:border-opacity-80`}
       onClick={() => setExpanded(!expanded)}
     >
+      {/* Wallet/Account Badge */}
+      {email.wallet_email && (
+        <div className="flex items-center gap-1.5 mb-3 pb-2 border-b border-slate-100">
+          <Mail className="w-3 h-3 text-slate-400" />
+          <span className="text-xs text-slate-500 truncate">
+            {email.wallet_email}
+          </span>
+        </div>
+      )}
+      
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
@@ -125,22 +130,17 @@ function EmailCard({ email, category }) {
               {email.sender_name || 'Unknown Sender'}
             </span>
           </div>
-          <p className="text-sm text-slate-500 truncate mb-2">
+          <p className="text-sm text-slate-500 truncate mb-1">
             {email.from_address}
           </p>
-          <p className={`text-sm ${expanded ? '' : 'line-clamp-2'} text-slate-600 leading-relaxed`}>
-            {email.summary}
+          <p className={`text-sm font-medium ${expanded ? '' : 'line-clamp-2'} text-slate-700 leading-relaxed`}>
+            {email.subject}
           </p>
         </div>
         <div className="flex flex-col items-end gap-2 flex-shrink-0">
           <span className="text-xs text-slate-400 font-mono">
-            {formatDate(email.date_received || email.date_sent)}
+            {formatDate(email.date_received)}
           </span>
-          {email.category && (
-            <span className={`text-xs px-2 py-0.5 rounded-full ${config.bgColor} ${config.textColor}`}>
-              {email.category}
-            </span>
-          )}
           {expanded ? (
             <ChevronUp className="w-4 h-4 text-slate-400" />
           ) : (
@@ -149,62 +149,11 @@ function EmailCard({ email, category }) {
         </div>
       </div>
       
-      {expanded && (
+      {expanded && email.body && (
         <div className="mt-4 pt-4 border-t border-slate-200 animate-fade-in">
-          {email.important_dates && email.important_dates.length > 0 && (
-            <div className="mb-3">
-              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                Important Dates
-              </h4>
-              <div className="space-y-1">
-                {email.important_dates.map((date, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-sm">
-                    <Calendar className="w-3.5 h-3.5 text-violet-500" />
-                    <span className="text-slate-700">{date.date}</span>
-                    <span className="text-slate-400">—</span>
-                    <span className="text-slate-600">{date.description}</span>
-                    {date.urgency && (
-                      <span className={`text-xs px-1.5 py-0.5 rounded ${
-                        date.urgency === 'high' ? 'bg-rose-100 text-rose-600' :
-                        date.urgency === 'medium' ? 'bg-amber-100 text-amber-600' :
-                        'bg-emerald-100 text-emerald-600'
-                      }`}>
-                        {date.urgency}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {email.calendar && email.calendar.length > 0 && (
-            <div>
-              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                Calendar Events
-              </h4>
-              <div className="space-y-2">
-                {email.calendar.map((event, idx) => (
-                  <div key={idx} className="flex items-start gap-2 p-2 rounded-lg bg-slate-50">
-                    <Calendar className="w-4 h-4 text-violet-500 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-slate-700 font-medium">{event.title}</p>
-                      <p className="text-xs text-slate-500">
-                        {event.date} {event.time && `at ${event.time}`}
-                        {event.location && ` • ${event.location}`}
-                      </p>
-                      {event.suggested_action && (
-                        <span className="inline-flex items-center gap-1 mt-1 text-xs text-violet-600">
-                          <ExternalLink className="w-3 h-3" />
-                          {event.suggested_action}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <div className="text-sm text-slate-600 bg-slate-50 rounded-lg p-3 max-h-64 overflow-y-auto whitespace-pre-wrap">
+            {email.body}
+          </div>
         </div>
       )}
     </div>
@@ -212,9 +161,16 @@ function EmailCard({ email, category }) {
 }
 
 function CategorySection({ category, emails }) {
-  const [isCollapsed, setIsCollapsed] = useState(emails.length === 0)
+  const [isCollapsed, setIsCollapsed] = useState(true)
   const config = CATEGORY_CONFIG[category]
   const Icon = config.icon
+
+  // Sort emails by date_received, most recent first
+  const sortedEmails = [...emails].sort((a, b) => {
+    const dateA = new Date(a.date_received)
+    const dateB = new Date(b.date_received)
+    return dateB - dateA // Descending order (most recent first)
+  })
 
   return (
     <div className="animate-slide-up" style={{ animationFillMode: 'backwards' }}>
@@ -242,10 +198,10 @@ function CategorySection({ category, emails }) {
           )}
         </div>
       </button>
-      
+
       {!isCollapsed && emails.length > 0 && (
-        <div className="space-y-3 ml-4 pl-4 border-l-2 border-slate-200 mb-6">
-          {emails.map((email, idx) => (
+        <div className="space-y-3 mt-3">
+          {sortedEmails.map((email, idx) => (
             <EmailCard key={idx} email={email} category={category} />
           ))}
         </div>
@@ -276,43 +232,7 @@ function ConfigPanel({ config, setConfig, onAnalyze, isLoading }) {
       
       {isOpen && (
         <div className="p-4 pt-0 border-t border-slate-200 animate-fade-in">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4 mt-4">
-            <div>
-              <label className="block text-sm text-slate-600 mb-1.5">Days to Analyze</label>
-              <input
-                type="number"
-                min="1"
-                max="90"
-                value={config.days_back}
-                onChange={(e) => setConfig({ ...config, days_back: parseInt(e.target.value) || 7 })}
-                className="w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-slate-600 mb-1.5">Batch Size</label>
-              <input
-                type="number"
-                min="1"
-                max="50"
-                value={config.batch_size}
-                onChange={(e) => setConfig({ ...config, batch_size: parseInt(e.target.value) || 10 })}
-                className="w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-slate-600 mb-1.5">Confidence Threshold</label>
-              <input
-                type="number"
-                min="0"
-                max="1"
-                step="0.1"
-                value={config.confidence_threshold}
-                onChange={(e) => setConfig({ ...config, confidence_threshold: parseFloat(e.target.value) || 0.6 })}
-                className="w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
-              />
-            </div>
-          </div>
-          <div className="mb-4">
+          <div className="mb-4 mt-4">
             <label className="block text-sm text-slate-600 mb-1.5">Folders (comma-separated)</label>
             <input
               type="text"
@@ -367,12 +287,12 @@ function SummaryCards({ summary }) {
         <p className="text-3xl font-bold text-emerald-600">{activeCategories}</p>
       </div>
       <div className="glass rounded-xl p-4 border border-slate-200 shadow-sm">
-        <p className="text-sm text-slate-500 mb-1">Important</p>
-        <p className="text-3xl font-bold text-amber-600">{summary.IMPORTANCE || 0}</p>
+        <p className="text-sm text-slate-500 mb-1">Actions & Commitments</p>
+        <p className="text-3xl font-bold text-rose-600">{summary.ACTIONS_AND_COMMITMENTS || 0}</p>
       </div>
       <div className="glass rounded-xl p-4 border border-slate-200 shadow-sm">
-        <p className="text-sm text-slate-500 mb-1">Urgent</p>
-        <p className="text-3xl font-bold text-rose-600">{summary.URGENCY || 0}</p>
+        <p className="text-sm text-slate-500 mb-1">Schedule</p>
+        <p className="text-3xl font-bold text-violet-600">{summary.SCHEDULE_AND_DEADLINES || 0}</p>
       </div>
     </div>
   )
@@ -441,11 +361,8 @@ function SuccessToast({ message, onClose }) {
   )
 }
 
-function App() {
+function Dashboard({ user, onLogout, onManageAccounts }) {
   const [config, setConfig] = useState({
-    days_back: 7,
-    batch_size: 10,
-    confidence_threshold: 0.6,
     folders: ['INBOX', '[Gmail]/Sent Mail']
   })
   const [results, setResults] = useState(null)
@@ -459,15 +376,14 @@ function App() {
     setError(null)
     
     try {
+      const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE}/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          days_back: config.days_back,
-          batch_size: config.batch_size,
-          confidence_threshold: config.confidence_threshold,
           folders: config.folders
         })
       })
@@ -491,14 +407,13 @@ function App() {
   }
 
   const categoryOrder = [
-    'URGENCY',
-    'IMPORTANCE', 
-    'DEADLINES',
-    'REQUESTS',
-    'COMMITMENTS',
-    'OUTBOUND_COMMITMENTS',
-    'SCHEDULE',
-    'INFORMATIONAL'
+    'ACTIONS_AND_COMMITMENTS',
+    'SCHEDULE_AND_DEADLINES',
+    'BILLS_AND_RECEIPTS',
+    'FINANCE',
+    'RECRUITING',
+    'TRAVEL',
+    'PERSONAL'
   ]
 
   return (
@@ -512,14 +427,37 @@ function App() {
             </div>
             <div>
               <h1 className="text-xl font-display font-bold tracking-tight">
-                <span className="gradient-text">Email Insight</span>
-                <span className="text-slate-500 ml-1">Engine</span>
+                <span className="gradient-text">Samaryz AI</span>
               </h1>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-sm text-slate-400">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-mono">localhost:8000</span>
+          
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onManageAccounts}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors"
+            >
+              <Database className="w-4 h-4 text-slate-600" />
+              <span className="text-sm font-medium text-slate-700">Email Wallets</span>
+            </button>
+            
+            <div className="flex items-center gap-3 pl-3 border-l border-slate-200">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
+                  <span className="text-white text-sm font-medium">
+                    {user?.name?.[0] || user?.email?.[0]?.toUpperCase()}
+                  </span>
+                </div>
+                <span className="text-sm text-slate-600 hidden sm:block">{user?.email}</span>
+              </div>
+              <button
+                onClick={onLogout}
+                className="p-2 rounded-lg hover:bg-slate-100 transition-colors text-slate-500 hover:text-slate-700"
+                title="Sign out"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -544,12 +482,12 @@ function App() {
         ) : results && summary ? (
           <>
             <SummaryCards summary={summary} />
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {categoryOrder.map((category, idx) => (
                 <div key={category} className={`stagger-${idx + 1}`}>
-                  <CategorySection 
-                    category={category} 
-                    emails={results[category] || []} 
+                  <CategorySection
+                    category={category}
+                    emails={results[category] || []}
                   />
                 </div>
               ))}
@@ -571,6 +509,67 @@ function App() {
       {/* Toast */}
       {toast && <SuccessToast message={toast} onClose={() => setToast(null)} />}
     </div>
+  )
+}
+
+function App() {
+  const [user, setUser] = useState(null)
+  const [currentPage, setCurrentPage] = useState('dashboard')
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Check for existing session on mount
+  useEffect(() => {
+    const savedToken = localStorage.getItem('token')
+    const savedUser = localStorage.getItem('user')
+    
+    if (savedToken && savedUser) {
+      setUser(JSON.parse(savedUser))
+    }
+    setIsLoading(false)
+  }, [])
+
+  const handleLogin = (userData) => {
+    setUser(userData)
+    setCurrentPage('dashboard')
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    setUser(null)
+    setCurrentPage('dashboard')
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  // Not logged in - show login page
+  if (!user) {
+    return <LoginPage onLogin={handleLogin} />
+  }
+
+  // Email wallets management page
+  if (currentPage === 'accounts') {
+    return (
+      <EmailWalletsPage 
+        user={user}
+        onBack={() => setCurrentPage('dashboard')}
+      />
+    )
+  }
+
+  // Main dashboard
+  return (
+    <Dashboard 
+      user={user}
+      onLogout={handleLogout}
+      onManageAccounts={() => setCurrentPage('accounts')}
+    />
   )
 }
 
